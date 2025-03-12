@@ -1,17 +1,18 @@
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.set({ scriptMappings: {} });
-});
+chrome.runtime.onMessage.addListener((request, sender) => {
+  if (request.action === "injectScript" && sender.tab) {
+    console.log("Injecting script for tab:", sender.tab.id);
 
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  if (request.action === "saveScript") {
-      chrome.storage.local.get("scriptMappings", (data) => {
-          let scripts = data.scriptMappings || {};
-          scripts[request.url] = request.script;
-
-          chrome.storage.local.set({ scriptMappings: scripts }, () => {
-              sendResponse({ success: true });
-          });
-      });
-      return true;
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      func: (scriptContent) => {
+        console.log("Executing script:", scriptContent);
+        const scriptTag = document.createElement("script");
+        scriptTag.textContent = scriptContent;
+        document.documentElement.appendChild(scriptTag);
+        scriptTag.remove();
+      },
+      args: [request.script],
+      world: "MAIN",
+    });
   }
 });
